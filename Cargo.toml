@@ -1,0 +1,19 @@
+[package]
+name = "telegram-bot-proxy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4"
+actix-rt = "2"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "macros", "migrate"] }
+teloxide = { version = "0.17.0", features = ["macros"] }
+tokio = { version = "1.47.1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+env_logger = "0.11"
+log = "0.4"
+dotenv = "0.15"
+futures = "0.3.31"
+reqwest = "0.12.23"

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT telegram_id FROM subscriptions WHERE channel_name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "019e13a50c25acf6086fcb93dcc1735492d552f475cbfe7f4a053fa82d6b76f3"
+}
