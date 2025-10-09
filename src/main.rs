@@ -2,7 +2,7 @@ mod api;
 mod bot;
 mod db;
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer, web};
 use anyhow::Result;
 use teloxide::Bot;
 
@@ -11,8 +11,7 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:bot.db".to_string());
+    let database_url = std::env::var("DATABASE_URL").expect("DB url should be present");
     let pool = db::create_pool(&database_url).await?;
     let bot = Bot::from_env();
 

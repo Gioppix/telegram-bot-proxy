@@ -1,8 +1,12 @@
+use std::str::FromStr;
+
 use anyhow::Result;
-use sqlx::SqlitePool;
+use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
 
 pub async fn create_pool(database_url: &str) -> Result<SqlitePool> {
-    let pool = SqlitePool::connect(database_url).await?;
+    let pool = SqlitePool::connect_lazy_with(
+        SqliteConnectOptions::from_str(database_url)?.create_if_missing(true),
+    );
 
     sqlx::migrate!("./migrations").run(&pool).await?;
     Ok(pool)
