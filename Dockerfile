@@ -9,4 +9,8 @@ WORKDIR /app
 ENV SQLX_OFFLINE=true
 COPY . .
 RUN cargo build --release
+
+# Create the data directory for the database
+RUN mkdir -p /app/data
+
 CMD ["./target/release/telegram-bot-proxy"]
