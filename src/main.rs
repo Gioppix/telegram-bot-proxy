@@ -15,11 +15,12 @@ async fn main() -> Result<()> {
     let pool = db::create_pool(&database_url).await?;
     let bot = Bot::from_env();
 
-    // Start bot in background
     let bot_pool = pool.clone();
     tokio::spawn(async move {
+        // This is the poll loop, it'll never stop (hopefully)
         if let Err(e) = bot::run_bot(bot_pool).await {
             log::error!("Bot error: {}", e);
+            std::process::exit(1);
         }
     });
 
@@ -30,6 +31,7 @@ async fn main() -> Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(bot.clone()))
             .route("/send-message", web::post().to(api::send_message))
+            .route("/broadcast", web::post().to(api::broadcast))
     })
     .bind("127.0.0.1:8080")?
     .run()

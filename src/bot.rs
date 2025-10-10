@@ -24,26 +24,64 @@ async fn handle_command(
 ) -> ResponseResult<()> {
     match cmd {
         Command::Subscribe(channel_name) => {
-            if channel_name.contains(' ') {
-                bot.send_message(msg.chat.id, "Channel name must not contain spaces")
-                    .await?;
-                return Ok(());
-            }
-
-            if channel_name.is_empty() {
-                bot.send_message(msg.chat.id, "Channel name cannot be empty")
-                    .await?;
+            if !crate::db::validate_channel_name(&channel_name) {
+                bot.send_message(
+                    msg.chat.id,
+                    "Invalid channel name. Only letters, numbers, and underscores are allowed.",
+                )
+                .await?;
                 return Ok(());
             }
 
             match crate::db::subscribe(&pool, msg.chat.id.0, &channel_name).await {
                 Ok(_) => {
-                    bot.send_message(msg.chat.id, format!("Subscribed to '{}'", channel_name))
-                        .await?;
+                    bot.send_message(
+                        msg.chat.id,
+                        format!("Successfully subscribed to '{}'", channel_name),
+                    )
+                    .await?;
                 }
-                Err(_) => {
-                    bot.send_message(msg.chat.id, "Already subscribed or error occurred")
-                        .await?;
+                Err(e) => {
+                    let error_msg = if e.to_string().contains("UNIQUE constraint failed") {
+                        format!("You are already subscribed to '{}'", channel_name)
+                    } else {
+                        format!("Error subscribing to '{}': {}", channel_name, e)
+                    };
+                    bot.send_message(msg.chat.id, error_msg).await?;
+                }
+            }
+        }
+        Command::Unsubscribe(channel_name) => {
+            if !crate::db::validate_channel_name(&channel_name) {
+                bot.send_message(
+                    msg.chat.id,
+                    "Invalid channel name. Only letters, numbers, and underscores are allowed.",
+                )
+                .await?;
+                return Ok(());
+            }
+
+            match crate::db::unsubscribe(&pool, msg.chat.id.0, &channel_name).await {
+                Ok(true) => {
+                    bot.send_message(
+                        msg.chat.id,
+                        format!("Successfully unsubscribed from '{}'", channel_name),
+                    )
+                    .await?;
+                }
+                Ok(false) => {
+                    bot.send_message(
+                        msg.chat.id,
+                        format!("You are not subscribed to '{}'", channel_name),
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    bot.send_message(
+                        msg.chat.id,
+                        format!("Error unsubscribing from '{}': {}", channel_name, e),
+                    )
+                    .await?;
                 }
             }
         }
@@ -56,4 +94,6 @@ async fn handle_command(
 enum Command {
     #[command(description = "Subscribe to a channel")]
     Subscribe(String),
+    #[command(description = "Unsubscribe from a channel")]
+    Unsubscribe(String),
 }
