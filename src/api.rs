@@ -1,4 +1,5 @@
 use actix_web::{HttpResponse, Result, get, post, web};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use teloxide::prelude::*;
@@ -16,17 +17,24 @@ pub struct SendMessageResponse {
     channel: String,
 }
 
-#[derive(Deserialize)]
-pub struct BroadcastRequest {
-    key: String,
-    message: String,
-}
-
 #[derive(Serialize)]
 pub struct BroadcastResponse {
     sent: usize,
     errors: usize,
     total_subscribers: usize,
+}
+
+#[derive(Serialize)]
+pub struct Subscription {
+    telegram_id: i64,
+    channel_name: String,
+    created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize)]
+pub struct GetSubscriptionsResponse {
+    subscriptions: Vec<Subscription>,
+    total: usize,
 }
 
 #[get("/health")]
@@ -90,28 +98,54 @@ pub async fn send_message(
     }))
 }
 
+pub struct Authenticated;
+
+impl actix_web::FromRequest for Authenticated {
+    type Error = actix_web::Error;
+    type Future = std::future::Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        let super_secret_key = std::env::var("SUPER_SECRET_KEY").unwrap_or_else(|_| String::new());
+
+        if super_secret_key.is_empty() {
+            log::error!("SUPER_SECRET_KEY is not set in environment");
+            return std::future::ready(Err(actix_web::error::ErrorInternalServerError(
+                serde_json::json!({
+                    "error": "Server configuration error"
+                }),
+            )));
+        }
+
+        let auth_header = req
+            .headers()
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok());
+
+        match auth_header {
+            Some(header) if header == format!("Bearer {}", super_secret_key) => {
+                std::future::ready(Ok(Authenticated))
+            }
+            _ => std::future::ready(Err(actix_web::error::ErrorUnauthorized(
+                serde_json::json!({
+                    "error": "Invalid or missing authorization"
+                }),
+            ))),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct BroadcastRequest {
+    message: String,
+}
+
 #[post("/broadcast")]
 pub async fn broadcast(
+    _auth: Authenticated,
     req: web::Json<BroadcastRequest>,
     pool: web::Data<SqlitePool>,
     bot: web::Data<Bot>,
 ) -> Result<HttpResponse> {
-    // Validate secret key
-    let super_secret_key = std::env::var("SUPER_SECRET_KEY").unwrap_or_else(|_| String::new());
-
-    if super_secret_key.is_empty() {
-        log::error!("SUPER_SECRET_KEY is not set in environment");
-        return Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-            "error": "Server configuration error"
-        })));
-    }
-
-    if req.key != super_secret_key {
-        return Ok(HttpResponse::Unauthorized().json(serde_json::json!({
-            "error": "Invalid key"
-        })));
-    }
-
     // Validate message length
     if req.message.is_empty() {
         return Ok(HttpResponse::BadRequest().json(serde_json::json!({
@@ -169,6 +203,48 @@ pub async fn broadcast(
         sent,
         errors,
         total_subscribers,
+    }))
+}
+
+#[get("/subscriptions")]
+pub async fn get_subscriptions(
+    _auth: Authenticated,
+    pool: web::Data<SqlitePool>,
+) -> Result<HttpResponse> {
+    // Get all subscriptions
+    let subscriptions = match sqlx::query!(
+        "
+        SELECT telegram_id,
+               channel_name,
+               created_at
+        FROM subscriptions
+        ORDER BY channel_name, telegram_id
+        "
+    )
+    .fetch_all(pool.get_ref())
+    .await
+    {
+        Ok(rows) => rows
+            .into_iter()
+            .map(|r| Subscription {
+                telegram_id: r.telegram_id,
+                channel_name: r.channel_name,
+                created_at: DateTime::from_timestamp(r.created_at, 0),
+            })
+            .collect::<Vec<_>>(),
+        Err(e) => {
+            log::error!("Database error: {}", e);
+            return Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Database error occurred"
+            })));
+        }
+    };
+
+    let total = subscriptions.len();
+
+    Ok(HttpResponse::Ok().json(GetSubscriptionsResponse {
+        subscriptions,
+        total,
     }))
 }
 

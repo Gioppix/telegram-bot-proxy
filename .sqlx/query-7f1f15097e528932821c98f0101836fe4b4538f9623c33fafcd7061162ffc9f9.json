@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT telegram_id,\n               channel_name,\n               created_at\n        FROM subscriptions\n        ORDER BY channel_name, telegram_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "channel_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7f1f15097e528932821c98f0101836fe4b4538f9623c33fafcd7061162ffc9f9"
+}

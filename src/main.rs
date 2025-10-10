@@ -25,7 +25,10 @@ async fn main() -> Result<()> {
     });
 
     // Start web server
-    log::info!("Starting web server on 127.0.0.1:8080");
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let bind_address = format!("127.0.0.1:{}", port);
+    log::info!("Starting web server on {}", bind_address);
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
@@ -33,8 +36,9 @@ async fn main() -> Result<()> {
             .service(api::health_check)
             .service(api::send_message)
             .service(api::broadcast)
+            .service(api::get_subscriptions)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(&bind_address)?
     .run()
     .await?;
 
