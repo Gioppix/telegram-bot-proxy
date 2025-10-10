@@ -17,21 +17,21 @@ pub struct SendMessageResponse {
     channel: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BroadcastResponse {
     sent: usize,
     errors: usize,
     total_subscribers: usize,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Subscription {
     telegram_id: i64,
     channel_name: String,
     created_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GetSubscriptionsResponse {
     subscriptions: Vec<Subscription>,
     total: usize,
@@ -250,6 +250,8 @@ pub async fn get_subscriptions(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[tokio::test]
     #[ignore = "manual"]
     async fn manual_test_send_message() {
@@ -264,5 +266,53 @@ mod tests {
             .await;
 
         println!("Response: {:?}", response);
+    }
+
+    #[tokio::test]
+    #[ignore = "manual"]
+    async fn manual_test_get_subscriptions() {
+        dotenv::dotenv().ok();
+        let secret_key = std::env::var("SUPER_SECRET_KEY").expect("SUPER_SECRET_KEY must be set");
+
+        let client = reqwest::Client::new();
+        let response = client
+            .get("https://telegram-proxy.up.railway.app/subscriptions")
+            .header("Authorization", format!("Bearer {}", secret_key))
+            .send()
+            .await
+            .unwrap();
+
+        let parsed: GetSubscriptionsResponse = response.json().await.unwrap();
+
+        println!("Total subscriptions: {}", parsed.total);
+        for sub in &parsed.subscriptions {
+            println!(
+                "  telegram_id: {}, created_at: {:?}, channel: {}",
+                sub.telegram_id,
+                sub.created_at.unwrap(),
+                sub.channel_name
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "manual"]
+    async fn manual_test_broadcast() {
+        dotenv::dotenv().ok();
+        let secret_key = std::env::var("SUPER_SECRET_KEY").expect("SUPER_SECRET_KEY must be set");
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post("https://telegram-proxy.up.railway.app/broadcast")
+            .header("Authorization", format!("Bearer {}", secret_key))
+            .json(&serde_json::json!({
+                "message": "Test broadcast message"
+            }))
+            .send()
+            .await
+            .unwrap();
+
+        let body: BroadcastResponse = response.json().await.unwrap();
+        println!("Body: {:?}", body);
     }
 }
