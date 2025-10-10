@@ -25,8 +25,8 @@ async fn main() -> Result<()> {
     });
 
     // Start web server
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let bind_address = format!("127.0.0.1:{}", port);
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8100".to_string());
+    let bind_address = format!("0.0.0.0:{}", port);
     log::info!("Starting web server on {}", bind_address);
 
     HttpServer::new(move || {
