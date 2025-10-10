@@ -30,8 +30,9 @@ async fn main() -> Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(bot.clone()))
-            .route("/send-message", web::post().to(api::send_message))
-            .route("/broadcast", web::post().to(api::broadcast))
+            .service(api::health_check)
+            .service(api::send_message)
+            .service(api::broadcast)
     })
     .bind("127.0.0.1:8080")?
     .run()

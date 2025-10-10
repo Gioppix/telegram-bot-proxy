@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, Result, web};
+use actix_web::{HttpResponse, Result, get, post, web};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use teloxide::prelude::*;
@@ -29,6 +29,14 @@ pub struct BroadcastResponse {
     total_subscribers: usize,
 }
 
+#[get("/health")]
+pub async fn health_check() -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "status": "ok",
+    })))
+}
+
+#[post("/send-message")]
 pub async fn send_message(
     req: web::Json<SendMessageRequest>,
     pool: web::Data<SqlitePool>,
@@ -82,6 +90,7 @@ pub async fn send_message(
     }))
 }
 
+#[post("/broadcast")]
 pub async fn broadcast(
     req: web::Json<BroadcastRequest>,
     pool: web::Data<SqlitePool>,

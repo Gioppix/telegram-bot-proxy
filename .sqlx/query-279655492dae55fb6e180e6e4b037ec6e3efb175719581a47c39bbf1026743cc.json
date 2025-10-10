@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM subscriptions WHERE telegram_id = ? AND channel_name = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "279655492dae55fb6e180e6e4b037ec6e3efb175719581a47c39bbf1026743cc"
+}
